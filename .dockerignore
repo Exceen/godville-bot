@@ -1,5 +1,3 @@
-*.DS_Store
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -84,7 +82,6 @@ celerybeat-schedule
 *.sage.py
 
 # Environments
-.env
 .venv
 env/
 venv/
@@ -105,15 +102,13 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-# SonarQube
-.scannerwork
-
 # others
 geckodriver.log
 *.png
+
 renew.bak
+manifest-tool
+manifest.yaml
 deprecated/
-.idea
-debug
-test.sh
-*.sarif
+README.md
+Makefile

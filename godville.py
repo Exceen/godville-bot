@@ -15,11 +15,13 @@ from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
 
+
 from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.alert import Alert
 
 from dotenv import load_dotenv
 
@@ -41,17 +43,28 @@ def get_user_agent():
         return "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.63 Safari/537.36"
 
 
-# def exit_with_error(message):
-#     logger.info(str(message))
-#     browser.quit()
-#     exit(1)
-
-
 def get_credentials():
     username = os.getenv('USERNAME')
     password = os.getenv('PASSWORD')
     return username, password
 
+def click_action_link(browser, text, needs_confirmation):
+    try:
+        send_to_arena_link = browser.find_element(By.XPATH, f'//a[contains(text(), "{text}")]')
+        if send_to_arena_link is not None and send_to_arena_link.is_displayed():
+            print(send_to_arena_link.text, 'found!!!')
+            send_to_arena_link.click()
+            if needs_confirmation:
+                Alert(browser).accept()
+
+            print(f'"{text}" executed!')
+            return True
+    except NoSuchElementException:
+        print(text, 'not found')
+        return False
+        
+    print(text, 'may be invisible...')
+    return False
 
 def main():
     logger.info('Starting browser...')
@@ -91,32 +104,34 @@ def main():
         login_button = browser.find_element(By.NAME, 'commit')
         login_button.click()
 
+        ## login done
 
+        WebDriverWait(browser, 30).until(EC.presence_of_element_located((By.CLASS_NAME, 'gp_val')))
+        godpower_element = browser.find_element(By.CLASS_NAME, 'gp_val')
+        godpower = int(''.join(filter(str.isdigit, godpower_element.text)))
 
-
-        # main_text = 'Verfügbarkeit von Gemeinschaftsstrom'
-
-        # WebDriverWait(browser, 120).until(EC.presence_of_element_located((By.XPATH, f'//h4[contains(text(), "{main_text}")]')))
-        # browser.implicitly_wait(2)
+        print('Godpower:', str(godpower) + '%')
         # sleep(2)
-        # WebDriverWait(browser, 120).until(EC.presence_of_element_located((By.XPATH, f'//h4[contains(text(), "{main_text}")]')))
-        # main_div = browser.find_element(By.XPATH, f'//h4[contains(text(), "{main_text}")]')
+        browser.implicitly_wait(2)
 
-        # parent_el = main_div.find_element(By.XPATH, '..')
-        # while parent_el != None:
-        #     if 'grid-column' in parent_el.get_attribute('style'):
-        #         break
-        #     parent_el = parent_el.find_element(By.XPATH, '..')
+        if godpower < 50:
+            print('Not enough godpower!')
+            return
 
-        # subelements = parent_el.find_elements(By.XPATH, './/h4')
-        # subelements = [x for x in subelements if main_text not in str(x.text)]
+        ## now we're talking...
+        if not click_action_link(browser, 'Boss', True):
+            if not click_action_link(browser, 'Set Sail', True):
+                if not click_action_link(browser, 'Drop to Dungeon', True):
+                    if not click_action_link(browser, 'Send to Arena', True):
 
-        # if len(subelements) != 1:
-        #     logger.warning('Unexpected number of subelements:', len(subelements))
+                        print('nothing interesting to do...')
 
-        # availability_status = subelements[0].text
+                        # if not click_action_link(browser, 'Encourage', False):
+                        if not click_action_link(browser, 'Punish', False):
+                            print('nothing to do...')
 
 
+        sleep(9999999)
     except Exception as e:
         raise e
     finally:

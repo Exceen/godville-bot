@@ -48,33 +48,43 @@ def get_credentials():
     password = os.getenv('PASSWORD')
     return username, password
 
-def click_action_link(browser, text, needs_confirmation):
+def click_action_link(browser, text):
     try:
-        send_to_arena_link = browser.find_element(By.XPATH, f'//a[contains(text(), "{text}")]')
-        if send_to_arena_link is not None and send_to_arena_link.is_displayed():
-            print(send_to_arena_link.text, 'found!!!')
-            send_to_arena_link.click()
-            if needs_confirmation:
-                Alert(browser).accept()
+        clickable = browser.find_element(By.XPATH, f'//a[contains(text(), "{text}")]')
+        if clickable is not None and clickable.is_displayed():
+
+            browser.execute_script("window.confirm = function(){return true;}");
+            clickable.click()
+
+            # try:
+            #     WebDriverWait(browser, 3).until(EC.alert_is_present(), 'Timed out waiting for confirmation popup to appear.')
+            #     alert = browser.switch_to.alert
+            #     alert.accept()
+            #     print('alert accepted')
+            # except TimeoutException:
+            #     print('no alert')
+
+            # if needs_confirmation:
+            #     Alert(browser).accept()
 
             print(f'"{text}" executed!')
             return True
     except NoSuchElementException:
-        print(text, 'not found')
+        # print(text, 'not found')
         return False
-        
-    print(text, 'may be invisible...')
+
+    # print(text, 'may be invisible...')
     return False
 
 def main():
-    logger.info('Starting browser...')
+    # logger.info('Starting browser...')
 
     username, password = get_credentials()
 
     profile = FirefoxProfile()
     profile.set_preference("general.useragent.override", get_user_agent())
     browser_options = webdriver.FirefoxOptions()
-    # browser_options.add_argument("--headless")
+    browser_options.add_argument("--headless")
     browser_options.profile = profile
 
     global RUNNING_AS_MAIN
@@ -119,19 +129,26 @@ def main():
             return
 
         ## now we're talking...
-        if not click_action_link(browser, 'Boss', True):
-            if not click_action_link(browser, 'Set Sail', True):
-                if not click_action_link(browser, 'Drop to Dungeon', True):
-                    if not click_action_link(browser, 'Send to Arena', True):
+        orders = [
+            'Boss',
+            'Set Sail',
+            'Drop to Dungeon',
+            # 'Send to Arena',
+            'Punish',
+            # 'Encourage',
+            # 'Miracle',
+        ]
 
-                        print('nothing interesting to do...')
+        something_done = False
+        for order in orders:
+            if click_action_link(browser, order):
+                something_done = True
+                break
 
-                        # if not click_action_link(browser, 'Encourage', False):
-                        if not click_action_link(browser, 'Punish', False):
-                            print('nothing to do...')
+        if not something_done:
+            print('nothing to do...')
 
-
-        sleep(9999999)
+        # sleep(9999)
     except Exception as e:
         raise e
     finally:

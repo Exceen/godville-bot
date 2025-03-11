@@ -67,9 +67,7 @@ COPY --from=builder $VIRTUAL_ENV $VIRTUAL_ENV
 WORKDIR /app
 
 # Copy and set the entrypoint bash script
-COPY main.py .
-COPY utils.py .
-COPY template.html .
+COPY godville.py .
 COPY .env .
 # COPY . .
-ENTRYPOINT ["python", "./main.py"]
+ENTRYPOINT ["python", "./godville.py"]

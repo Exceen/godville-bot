@@ -68,6 +68,7 @@ WORKDIR /app
 
 # Copy and set the entrypoint bash script
 COPY godville.py .
+COPY main.py .
 COPY .env .
 # COPY . .
-ENTRYPOINT ["python", "./godville.py"]
+ENTRYPOINT ["python", "./main.py"]

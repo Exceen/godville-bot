@@ -62,7 +62,7 @@ def click_action_link(browser, text):
     # print(text, 'may be invisible...')
     return False
 
-def main():
+def do_bot_action():
     # logger.info('Starting browser...')
 
     username, password = get_credentials()
@@ -149,5 +149,5 @@ def main():
 
 if __name__ == "__main__":
     RUNNING_AS_MAIN = True
-    main()
+    do_bot_action()
 

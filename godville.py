@@ -14,8 +14,6 @@ from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
-
-
 from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
@@ -52,20 +50,8 @@ def click_action_link(browser, text):
     try:
         clickable = browser.find_element(By.XPATH, f'//a[contains(text(), "{text}")]')
         if clickable is not None and clickable.is_displayed():
-
             browser.execute_script("window.confirm = function(){return true;}");
             clickable.click()
-
-            # try:
-            #     WebDriverWait(browser, 3).until(EC.alert_is_present(), 'Timed out waiting for confirmation popup to appear.')
-            #     alert = browser.switch_to.alert
-            #     alert.accept()
-            #     print('alert accepted')
-            # except TimeoutException:
-            #     print('no alert')
-
-            # if needs_confirmation:
-            #     Alert(browser).accept()
 
             print(f'"{text}" executed!')
             return True
@@ -121,34 +107,40 @@ def main():
         godpower = int(''.join(filter(str.isdigit, godpower_element.text)))
 
         print('Godpower:', str(godpower) + '%')
-        # sleep(2)
-        browser.implicitly_wait(2)
+        sleep(2)
+        # browser.implicitly_wait(5)
 
         if godpower < 50:
             print('Not enough godpower!')
             return
 
         ## now we're talking...
-        orders = [
-            'Boss',
+        action_orders = [
+            'Resurrect',
+            'Explore Datamine',
             'Set Sail',
             'Drop to Dungeon',
-            # 'Send to Arena',
+            'Send to Arena',
+        ]
+        idle_orders = [
             'Punish',
-            # 'Encourage',
-            # 'Miracle',
+            'Encourage',
+            'Miracle',
         ]
 
         something_done = False
-        for order in orders:
+        for order in action_orders:
             if click_action_link(browser, order):
                 something_done = True
                 break
 
         if not something_done:
-            print('nothing to do...')
+            order = idle_orders[random.randint(0, len(idle_orders) - 1)]
+            if not click_action_link(browser, order):
+                print('nothing found to do...')
 
-        # sleep(9999)
+        # browser.implicitly_wait(5)
+        sleep(5)
     except Exception as e:
         raise e
     finally:

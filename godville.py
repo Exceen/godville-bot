@@ -148,22 +148,26 @@ def do_bot_action():
         sleep(2)
         # browser.implicitly_wait(5)
 
+        if click_action_link(browser, 'Resurrect'):
+            print('RESURRECTED')
+            return
+
         # if godpower < 50:
         #     print('Not enough godpower!')
         #     return
 
         ## now we're talking...
         action_orders = [
-            'Resurrect',
+            # 'Resurrect',
             'Explore Datamine',
             'Set Sail',
             'Drop to Dungeon',
-            'Send to Arena',
+            # 'Send to Arena',
         ]
         idle_orders = [
             'Punish',
-            'Encourage',
-            'Miracle',
+            # 'Encourage',
+            # 'Miracle',
         ]
 
         something_done = False

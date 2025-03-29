@@ -62,7 +62,45 @@ def click_action_link(browser, text):
     # print(text, 'may be invisible...')
     return False
 
+def get_godpower():
+    cookies = {}
+
+    response = requests.post('https://godvillegame.com/login', data={
+        'username': os.getenv('USERNAME'),
+        'password': os.getenv('PASSWORD'),
+        'save_login': 'true',
+        'commit': 'Login'
+    })
+    for c in response.cookies:
+        cookies[c.name] = c.value
+
+    response = requests.post('https://godvillegame.com/login/login', data={
+        'username': os.getenv('USERNAME'),
+        'password': os.getenv('PASSWORD'),
+        'save_login': 'true',
+        'commit': 'Login'
+    }, cookies=cookies)
+    for c in response.cookies:
+        cookies[c.name] = c.value
+
+    cookies['gn'] = os.getenv('USERNAME')
+
+    response = requests.post('https://godvillegame.com/fbh/feed?a=GjZLI9oQGPkBZMqMMMP3KYBRVcqmu&cnt=-1', cookies=cookies)
+
+    json = response.json()
+
+    return int(json['hero']['godpower'])
+
+
+
 def do_bot_action():
+    godpower = get_godpower()
+
+    print('Godpower:', str(godpower) + '%')    
+    if godpower < 50:
+        print('Not enough godpower!')
+        return
+
     # logger.info('Starting browser...')
 
     username, password = get_credentials()
@@ -103,16 +141,16 @@ def do_bot_action():
         ## login done
 
         WebDriverWait(browser, 30).until(EC.presence_of_element_located((By.CLASS_NAME, 'gp_val')))
-        godpower_element = browser.find_element(By.CLASS_NAME, 'gp_val')
-        godpower = int(''.join(filter(str.isdigit, godpower_element.text)))
+        # godpower_element = browser.find_element(By.CLASS_NAME, 'gp_val')
+        # godpower = int(''.join(filter(str.isdigit, godpower_element.text)))
 
-        print('Godpower:', str(godpower) + '%')
+        # print('Godpower:', str(godpower) + '%')
         sleep(2)
         # browser.implicitly_wait(5)
 
-        if godpower < 50:
-            print('Not enough godpower!')
-            return
+        # if godpower < 50:
+        #     print('Not enough godpower!')
+        #     return
 
         ## now we're talking...
         action_orders = [

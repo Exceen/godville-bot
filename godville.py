@@ -1,73 +1,57 @@
-import os
-import random
-from getpass import getpass
-from sys import argv
-from time import sleep
-import logging
-
 import requests
-from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException, TimeoutException, StaleElementReferenceException
-from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.common.by import By
-from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
-from selenium.webdriver.firefox.service import Service
-from selenium.webdriver.support import expected_conditions
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.common.alert import Alert
-
+import json
+import base64
+import random
+from time import sleep
 from dotenv import load_dotenv
+import os
 
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 load_dotenv(dotenv_path=ROOT_DIR + '/.env')
 
-logging.basicConfig(level=logging.INFO, format='[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s', datefmt='%Y-%m-%d %I:%M:%S %p')
-logger = logging.getLogger(__name__)
 
-RUNNING_AS_MAIN = False
+ACTION_PRIORITY = [
+    {'action': 'punish', 'threshold': 75},
+    # {'action': 'encourage', 'threshold': 75},
+    # {'action': 'third_action', 'threshold': 75},
+    {'action': 'to_dungeon', 'threshold': 50},
+    {'action': 'to_sail', 'threshold': 50},
+    {'action': 'to_royale', 'threshold': 50},
+    # {'action': 'to_arena', 'threshold': 50},
+]
 
-def get_user_agent():
-    r = requests.get(url="https://jnrbsn.github.io/user-agents/user-agents.json")
-    r.close()
-    if r.status_code == 200 and len(list(r.json())) > 0:
-        agents = r.json()
-        return list(agents).pop(random.randint(0, len(agents) - 1))
+
+def random_char():
+    e = random.randint(0, 61)
+    if e < 10:
+        return str(e)
+    elif e < 36:
+        return chr(e + 55)  # A-Z
     else:
-        return "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.63 Safari/537.36"
+        return chr(e + 61)  # a-z
 
 
-def get_credentials():
-    username = os.getenv('USERNAME')
-    password = os.getenv('PASSWORD')
-    return username, password
+def random_string(length):
+    return ''.join(random_char() for _ in range(length))
 
-def click_action_link(browser, text):
-    try:
-        clickable = browser.find_element(By.XPATH, f'//a[contains(text(), "{text}")]')
-        if clickable is not None and clickable.is_displayed():
-            browser.execute_script("window.confirm = function(){return true;}");
-            clickable.click()
 
-            print(f'"{text}" executed!')
-            return True
-    except NoSuchElementException:
-        # print(text, 'not found')
-        return False
+def encode_base64(s):
+    text_bytes = s.encode('utf-8')
+    base64_bytes = base64.b64encode(text_bytes)
+    base64_string = base64_bytes.decode('utf-8')
+    base64_string = base64_string.replace('=', '')
+    return base64_string
 
-    # print(text, 'may be invisible...')
-    return False
 
-def get_godpower():
+def get_login_cookies():
     cookies = {}
 
+    username = os.getenv('USERNAME')
+    password = os.getenv('PASSWORD')
+
     response = requests.post('https://godvillegame.com/login', data={
-        'username': os.getenv('USERNAME'),
-        'password': os.getenv('PASSWORD'),
+        'username': username,
+        'password': password,
         'save_login': 'true',
         'commit': 'Login'
     })
@@ -75,121 +59,89 @@ def get_godpower():
         cookies[c.name] = c.value
 
     response = requests.post('https://godvillegame.com/login/login', data={
-        'username': os.getenv('USERNAME'),
-        'password': os.getenv('PASSWORD'),
+        'username': username,
+        'password': password,
         'save_login': 'true',
         'commit': 'Login'
     }, cookies=cookies)
     for c in response.cookies:
         cookies[c.name] = c.value
 
-    cookies['gn'] = os.getenv('USERNAME')
+    cookies['gn'] = username
 
+    return cookies
+
+
+def get_all_info(cookies):
     response = requests.post('https://godvillegame.com/fbh/feed?a=GjZLI9oQGPkBZMqMMMP3KYBRVcqmu&cnt=-1', cookies=cookies)
+    return response.json()
 
-    json = response.json()
 
-    return int(json['hero']['godpower'])
+def do_action(cookies, action):
+    action_dict = {'action': action}
 
+    magic_values = {
+        'action': 'YFQT8EtYAQwiIgmiUA2V',
+        # 'type': 'N21ig4U1AbvfogpUb4AP', # 1
+        # 'type': 'BhyjK8yaDXc6mKTI6do7', # 2
+        # 'type': '3JaEcn7VbOq7sIs8koKn', # 3
+    }
+
+    k = list(action_dict.keys())[0]
+    a = random_string(4) + magic_values[k] + random_string(5)
+    b = random_string(5) + encode_base64(json.dumps(action_dict, separators=(',', ':'))) + random_string(3)
+
+    body = {
+        'a': a,
+        'b': b,
+    }
+
+    response = requests.post('https://godvillegame.com/fbh/feed', cookies=cookies, data=body)
+    return response.json()
+
+
+def get_godpower(cookies):
+    return int(get_all_info(cookies)['hero']['godpower'])
+
+
+def get_action_availability(hero_info):
+    action_availability = {}
+    action_availability['punish'] = True
+    action_availability['encourage'] = True
+    action_availability['third_action'] = True
+
+    action_availability['to_arena'] = hero_info['is_arena_available'] and not hero_info['is_arena_disabled']
+    action_availability['to_dungeon'] = hero_info['d_a']
+    action_availability['to_sail'] = hero_info['s_a']
+    action_availability['to_royale'] = hero_info['r_a']
+
+    return action_availability
 
 
 def do_bot_action():
-    godpower = get_godpower()
+    cookies = get_login_cookies()
+    all_info = get_all_info(cookies)    
+    action_availability = get_action_availability(all_info['hero'])
 
-    print('Godpower:', str(godpower) + '%')    
-    if godpower < 50:
-        print('Not enough godpower!')
+    if all_info['hero']['health'] == 0:
+        do_action(cookies, 'resurrect')
+
+    godpower = get_godpower(cookies)
+    print('godpower:', str(godpower) + '%')
+
+    if godpower < min([action['threshold'] for action in ACTION_PRIORITY]):
+        print('Not enough godpower to do anything!')
         return
 
-    # logger.info('Starting browser...')
-
-    username, password = get_credentials()
-
-    profile = FirefoxProfile()
-    profile.set_preference("general.useragent.override", get_user_agent())
-    browser_options = webdriver.FirefoxOptions()
-    browser_options.add_argument("--headless")
-    browser_options.profile = profile
-
-    global RUNNING_AS_MAIN
-    if RUNNING_AS_MAIN:
-        import warnings
-        warnings.filterwarnings("ignore", category=DeprecationWarning) 
-        geckodriver_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'geckodriver')
-        service = Service(executable_path=geckodriver_path, firefox_binary=FirefoxBinary('/Applications/Firefox.app/Contents/MacOS/firefox'), log_output="/dev/null")
-    else:            
-        service = Service(executable_path="/usr/local/bin/geckodriver", log_output="/dev/null")
-
-    browser = webdriver.Firefox(options=browser_options, service=service)
-    browser.set_window_size(1024, 768)
-
-    try:
-        browser.get('https://godvillegame.com')
-        html = browser.page_source
-
-        WebDriverWait(browser, 30).until(EC.text_to_be_present_in_element((By.NAME, 'username'), ''))
-        mail_field = browser.find_element(By.NAME, 'username')
-        mail_field.send_keys(username)
-
-        WebDriverWait(browser, 30).until(EC.text_to_be_present_in_element((By.NAME, 'password'), ''))
-        password_field = browser.find_element(By.NAME, 'password')
-        password_field.send_keys(password)
-
-        login_button = browser.find_element(By.NAME, 'commit')
-        login_button.click()
-
-        ## login done
-
-        WebDriverWait(browser, 30).until(EC.presence_of_element_located((By.CLASS_NAME, 'gp_val')))
-        # godpower_element = browser.find_element(By.CLASS_NAME, 'gp_val')
-        # godpower = int(''.join(filter(str.isdigit, godpower_element.text)))
-
-        # print('Godpower:', str(godpower) + '%')
-        sleep(2)
-        # browser.implicitly_wait(5)
-
-        if click_action_link(browser, 'Resurrect'):
-            print('RESURRECTED')
-            return
-
-        # if godpower < 50:
-        #     print('Not enough godpower!')
-        #     return
-
-        ## now we're talking...
-        action_orders = [
-            # 'Resurrect',
-            'Explore Datamine',
-            'Set Sail',
-            'Drop to Dungeon',
-            # 'Send to Arena',
-        ]
-        idle_orders = [
-            'Punish',
-            # 'Encourage',
-            # 'Miracle',
-        ]
-
-        something_done = False
-        for order in action_orders:
-            if click_action_link(browser, order):
-                something_done = True
-                break
-
-        if not something_done:
-            order = idle_orders[random.randint(0, len(idle_orders) - 1)]
-            if not click_action_link(browser, order):
-                print('nothing found to do...')
-
-        # browser.implicitly_wait(5)
-        sleep(5)
-    except Exception as e:
-        raise e
-    finally:
-        browser.quit()
+    for action in ACTION_PRIORITY:
+        if action_availability[action['action']]:
+            while godpower >= action['threshold']:
+                do_action(cookies, action['action'])
+                print('executed', action['action'])
+                godpower = get_godpower(cookies)
 
 
-if __name__ == "__main__":
-    RUNNING_AS_MAIN = True
+
+if __name__ == '__main__':
     do_bot_action()
 

@@ -6,6 +6,8 @@ from time import sleep
 from dotenv import load_dotenv
 import os
 
+# from debug import print_debug
+
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 load_dotenv(dotenv_path=ROOT_DIR + '/.env')
 
@@ -127,6 +129,8 @@ def do_bot_action():
     cookies = get_login_cookies()
     all_info = get_all_info(cookies)
     action_availability = get_action_availability(all_info['hero'])
+
+    # print_debug(all_info, action_availability)
 
     if all_info['hero']['health'] == 0:
         do_action(cookies, 'resurrect')

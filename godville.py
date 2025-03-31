@@ -96,8 +96,13 @@ def do_action(cookies, action):
         'b': b,
     }
 
+    print(action_dict, '->', body)
+
     response = requests.post('https://godvillegame.com/fbh/feed', cookies=cookies, data=body)
-    return response.json()
+    try:
+        return response.json()
+    except Exception as e:
+        raise e
 
 
 def get_godpower(cookies):
@@ -120,7 +125,7 @@ def get_action_availability(hero_info):
 
 def do_bot_action():
     cookies = get_login_cookies()
-    all_info = get_all_info(cookies)    
+    all_info = get_all_info(cookies)
     action_availability = get_action_availability(all_info['hero'])
 
     if all_info['hero']['health'] == 0:
@@ -134,6 +139,7 @@ def do_bot_action():
         return
 
     for action in ACTION_PRIORITY:
+        print('checking', action)
         if action_availability[action['action']]:
             while godpower >= action['threshold']:
                 do_action(cookies, action['action'])
